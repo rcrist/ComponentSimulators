@@ -5,7 +5,7 @@ from PyQt6.QtGui import *
 from GUI.led_widget import LEDWidget
 
 class PropertiesDock(QDockWidget):
-    """ Dock widget for displaying component properties. """
+    """ Dock widget for displaying component properties """
     def __init__(self, parent=None, scene=None):
         super().__init__("Properties", parent)
         self.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
@@ -43,7 +43,7 @@ class PropertiesDock(QDockWidget):
         self.separator.setFrameShape(QFrame.Shape.HLine)
         self.separator.setFrameShadow(QFrame.Shadow.Sunken)
         self.layout.addWidget(self.separator)
-        self.state_title = QLabel("<b>Connector States</b>")
+        self.state_title = QLabel("<b>States</b>")
         self.layout.addWidget(self.state_title)
 
         # Container for connector LEDs
@@ -104,22 +104,39 @@ class PropertiesDock(QDockWidget):
             if child.widget():
                 child.widget().deleteLater()
 
-        if selected and hasattr(selected, "conns"):
+        if selected:
             self.type_label.setText(f"Type: {type(selected).__name__}")
-            # Add an LEDWidget and label for each connector
-            for idx, conn in enumerate(selected.conns):
-                conn_name = conn["name"]
+
+            # Special handling for Wire
+            if type(selected).__name__ == "Wire":
                 row = QWidget()
                 row_layout = QHBoxLayout(row)
                 row_layout.setContentsMargins(0, 0, 0, 0)
-                led = LEDWidget(state=conn.get("state", False))
-                label = QLabel(str(conn_name))
+                # Assume wire has an attribute 'state'
+                led = LEDWidget(state=getattr(selected, "state", False))
+                label = QLabel("Wire State")
                 row_layout.addWidget(led)
                 row_layout.addWidget(label)
                 self.leds_layout.addWidget(row)
 
                 # Connect LED click to toggle function
-                led.clicked.connect(lambda i=idx: self.toggle_connector_state(selected, i))
+                led.clicked.connect(lambda: self.toggle_wire_state(selected))
+            # Default: show connector LEDs if present
+            elif hasattr(selected, "conns"):
+                for idx, conn in enumerate(selected.conns):
+                    conn_name = conn["name"]
+                    row = QWidget()
+                    row_layout = QHBoxLayout(row)
+                    row_layout.setContentsMargins(0, 0, 0, 0)
+                    led = LEDWidget(state=conn.get("state", False))
+                    label = QLabel(str(conn_name))
+                    row_layout.addWidget(led)
+                    row_layout.addWidget(label)
+                    self.leds_layout.addWidget(row)
+
+                    # Connect LED click to toggle function
+                    led.clicked.connect(lambda i=idx: self.toggle_connector_state(selected, i))
+
         elif selected:
             self.type_label.setText(f"Type: {type(selected).__name__}")
 
@@ -139,3 +156,9 @@ class PropertiesDock(QDockWidget):
             conn["state"] = not conn.get("state", False)
             selected.update_state()
             self.show_controls(True, selected)  # Refresh LEDs
+
+    def toggle_wire_state(self, selected):
+        """Toggle the state of the wire and update the LED."""
+        if hasattr(selected, "state"):
+            selected.update_state()
+            self.show_controls(True, selected)  # Refresh LED

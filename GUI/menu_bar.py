@@ -11,6 +11,7 @@ from Components.nand_gate import NandGate
 from Components.nor_gate import NorGate
 from Components.xor_gate import XorGate
 from Components.xnor_gate import XnorGate
+from Components.wire import Wire
 from GUI.grid import set_grid_color
 
 class MenuBar(QMenuBar):
@@ -78,6 +79,7 @@ class MenuBar(QMenuBar):
             main_window.scene.update()
         if hasattr(main_window, "view"):
             main_window.view.viewport().update()
+        self.update_all_wires()
 
     def apply_light_theme(self):
         app = QApplication.instance()
@@ -127,6 +129,15 @@ class MenuBar(QMenuBar):
             main_window.scene.update()
         if hasattr(main_window, "view"):
             main_window.view.viewport().update()
+        self.update_all_wires()
+
+    def update_all_wires(self):
+        main_window = self.parent()
+        if hasattr(main_window, "scene"):
+            for item in main_window.scene.items():
+                from Components.wire import Wire
+                if isinstance(item, Wire):
+                    item.update()
 
     def toggle_grid(self):
         import GUI.grid as grid_module
@@ -190,7 +201,7 @@ class MenuBar(QMenuBar):
             return item.to_dict()
         if isinstance(item, XorGate):
             return item.to_dict()
-        if isinstance(item, XnorGate):
+        if isinstance(item, Wire):
             return item.to_dict()
         return None
 
@@ -212,6 +223,8 @@ class MenuBar(QMenuBar):
             return XorGate.from_dict(data)
         if t == "xnor_gate":
             return XnorGate.from_dict(data)
+        if t == "wire":
+            return Wire.from_dict(data)
         return None
 
     def print_diagram(self):
